@@ -1,0 +1,7 @@
+__ignore__
+_background_
+ground
+shadow
+stone
+crater_edge
+crater_slope

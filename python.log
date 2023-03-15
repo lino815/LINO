@@ -1,0 +1,1 @@
+2023-03-09 16:29:57,939      INFO     main.py181  Namespace(random_seed=0, checkpoint='moonrise-fm/output_model\\2023-03-09-162957', data_dir='moonrise-fm/data/acdc_ready2', predict_mode=False, use_normal_dataset=False, workers=4, batch_size=4, max_epoch=200, lr=0.001, decay=0.001, lr_factor=0.5, min_lr=5e-07, lr_scheduler='ReduceLROnPlateau', resume=False, colab=False)

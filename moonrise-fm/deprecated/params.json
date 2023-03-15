@@ -1,0 +1,44 @@
+{
+    "models_settings":{
+        "resize_width": 2000,
+        "equalize": "True",
+        "patch_width": 500,
+        "patch_height": 500,
+        "label_to_value": {
+            "_background_": 0, 
+            "ground": 1, 
+            "sheadow": 2,
+		"stone": 3,
+		"crater-edge": 4,
+		"crater-slope": 5
+        },
+        "dir": "../data/",
+        "train_dir": "moonrise_crater",
+        "test_dir": "images_test",
+        "image_folder": "images",
+        "mask_folder": "masks"
+    },
+    "shape_segmentation": {
+        "patches_moonrise": {
+            "path": "checkpoints/patches_moonrise_500_b2/CP28.pth",
+            "n_channels": 3,
+            "n_classes": 4,
+            "patch_height": 500, 
+            "patch_width": 500,
+            "stride_vertical": 48,
+            "stride_horizontal": 48,
+            "description": "unet model trained on size 96 patches"
+        },
+        "patches_s96": {
+            "path": "checkpoints/patches_s96_b8/CP76.pth",
+            "n_channels": 3,
+            "n_classes": 3,
+            "patch_height": 96, 
+            "patch_width": 96,
+            "stride_vertical": 48,
+            "stride_horizontal": 48,
+            "description": "unet model trained on size 96 patches"
+        }
+    }
+}
+

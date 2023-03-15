@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.pytest_cache/v" />
+      <excludeFolder url="file://$MODULE_DIR$/lightning_logs/version_12/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/example_patches_s96/version_0/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/example_patches_s96/version_1/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/example_patches_s96/version_2/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/example_patches_s96/version_3" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/example_patches_s96/version_4" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/example_patches_s96/version_5" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/LitUnet/version_0/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tb_logs/LitUnet/version_1/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tests/.pytest_cache/v" />
+      <excludeFolder url="file://$MODULE_DIR$/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/tests/.pytest_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
+    </content>
+    <orderEntry type="jdk" jdkName="Poetry (moonrise-fm)" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="format" value="PLAIN" />
+    <option name="myDocStringFormat" value="Plain" />
+  </component>
+</module>
