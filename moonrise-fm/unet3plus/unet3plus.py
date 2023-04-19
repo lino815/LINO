@@ -6,7 +6,7 @@ from .unet3plus_parts import unetConv2
 from .init_weights import init_weights
 from torch import optim
 from lib import plot_net_predictions
-from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision
+from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision,Dice
 
 '''
     UNet 3+
@@ -29,6 +29,7 @@ class UNet_3Plus(pl.LightningModule):
         self.val_recall = MulticlassRecall(num_classes=n_classes)
         self.val_precision = MulticlassPrecision(num_classes=n_classes)
         self.val_F1 = MulticlassF1Score(num_classes=n_classes)
+        self.val_dice = Dice(num_classes=n_classes)
 
 
         filters = [64, 128, 256, 512, 1024]
@@ -321,12 +322,14 @@ class UNet_3Plus(pl.LightningModule):
         precision = self.val_recall(preds, true_masks)
         recall = self.val_recall(preds, true_masks)
         f1 = self.val_F1(preds, true_masks)
+        dice = self.val_dice(preds, true_masks)
 
         self.log('val_jaccard', jaccard, on_step=False, on_epoch=True) # why prog_bar=True?
         self.log('val_accuracy', accuracy, on_step=False, on_epoch=True)
         self.log('val_precision', precision, on_step=False, on_epoch=True)
         self.log('val_recall', recall, on_step=False, on_epoch=True)
         self.log('val_f1', f1, on_step=False, on_epoch=True)
+        self.log('val_dice', dice, on_step=False, on_epoch=True)
 
 '''
     UNet 3+ with deep supervision
