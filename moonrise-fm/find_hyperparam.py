@@ -1,25 +1,35 @@
+import warnings
+
 import pytorch_lightning as pl
 import optuna
 from unet.load_data import make_dataloaders
 from optuna.integration import PyTorchLightningPruningCallback
-from seabed_Unet.emunet import EMUnet
-#from unet.unet_lighting import LitUnet
+from unet.unet_lighting import LitUnet
+from emunet.emunet import EMUnet
 import torch
 import os
+from unet3plus.unet3plus import UNet_3Plus
 
-from unet3plus import UNet_3Plus
 def objective(trial: optuna.trial.Trial) -> float:
     # para
+    model_name = 'seabed'
     epoch = 50
     # batchsize = trial.suggest_int("batchsize", 1, 4)
-    batchsize = 4
-    lr = trial.suggest_float("learning rate", 1e-3, 1)
+    batchsize = 8
+    lr = trial.suggest_float("learning rate", 1e-5, 1e-1, log=True)
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
-    dir_data = f'./moonrise-fm/data/moonrise3_crater_patches_512'
+    dir_data = f'data\moonrise2_patches_crater'
+    in_channels, out_channels = 3, 6
     # params = {'batch_size': batchsize, 'shuffle': True, 'num_workers': 4}
     params = {'batch_size': batchsize, 'shuffle': True, 'num_workers': 8}
-
-    model = EMUnet(n_channels=3, n_classes=4, lr=lr, optimizer=optimizer_name)
+    # model = LitUnet(n_channels=3, n_classes=4)
+    #model = UNet_3Plus(in_channels=3, n_classes=6)
+    if model_name == 'unet':
+        model = LitUnet(n_channels=in_channels, n_classes=out_channels, lr=lr)
+    if model_name == 'unet3+':
+        model = UNet_3Plus(in_channels=in_channels, n_classes=out_channels, lr=lr)
+    if model_name == 'seabed':
+        model = EMUnet(n_channels=in_channels, n_classes=out_channels, lr=lr)
     val_ratio = 0.1
     train_loader, val_loader, test_loader = make_dataloaders(dir_data, val_ratio, params)
 
@@ -35,7 +45,7 @@ def objective(trial: optuna.trial.Trial) -> float:
                          logger=True,
                          accelerator='gpu',
                          devices=1,
-                         callbacks=[PyTorchLightningPruningCallback(trial, monitor='val_jaccard')],
+                         callbacks=[PyTorchLightningPruningCallback(trial, monitor='val_dice')],
                          precision=16
                          )
     hyperparameters = dict(batchsize=batchsize,
@@ -46,7 +56,7 @@ def objective(trial: optuna.trial.Trial) -> float:
     trainer.logger.log_hyperparams(hyperparameters)
     trainer.fit(model, train_loader, val_loader)
 
-    return trainer.callback_metrics["'val_jaccard'"].detachm()
+    return trainer.callback_metrics["val_dice"].detach()
 
 
 
@@ -105,8 +115,8 @@ class PyTorchLightningPruningCallback(Callback):
 
 if __name__ == '__main__':
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    study = optuna.create_study(direction="maximize", pruner=optuna.pruners.MedianPruner())
-    study.optimize(objective, n_trials=50)
+    study = optuna.create_study(direction="maximize", pruner=optuna.pruners.MedianPruner(),storage='sqlite:///db.sqlite3')
+    study.optimize(objective, n_trials=30)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 

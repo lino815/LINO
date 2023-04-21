@@ -4,18 +4,21 @@ import torch
 from torch import optim
 from lib import plot_net_predictions
 from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision
-
+from torchmetrics import Dice
 
 class LitUnet(pl.LightningModule):
-    def __init__(self, n_channels, n_classes):
+    def __init__(self, n_channels, n_classes, lr=1e-3, optimizer='SGD'):
         super(LitUnet, self).__init__()
         self.n_classes = n_classes
+        self.lr = lr
+        self.optimizer_name = optimizer
+
         self.val_jaccard = MulticlassJaccardIndex(num_classes=n_classes)
         self.val_accuracy = MulticlassAccuracy(num_classes=n_classes)
         self.val_recall = MulticlassRecall(num_classes=n_classes)
         self.val_precision = MulticlassPrecision(num_classes=n_classes)
         self.val_F1 = MulticlassF1Score(num_classes=n_classes)
-
+        self.val_dice = Dice(num_classes=n_classes)
 
         self.inc = InConv(n_channels, 64)
         self.down1 = Down(64, 128)
@@ -80,15 +83,23 @@ class LitUnet(pl.LightningModule):
         precision = self.val_recall(preds, true_masks)
         recall = self.val_recall(preds, true_masks)
         f1 = self.val_F1(preds, true_masks)
+        dice = self.val_dice(preds, true_masks)
+
 
         self.log('val_jaccard', jaccard, on_step=False, on_epoch=True) # why prog_bar=True?
         self.log('val_accuracy', accuracy, on_step=False, on_epoch=True)
         self.log('val_precision', precision, on_step=False, on_epoch=True)
         self.log('val_recall', recall, on_step=False, on_epoch=True)
         self.log('val_f1', f1, on_step=False, on_epoch=True)
+        self.log('val_dice', dice, on_epoch=True)
 
     def configure_optimizers(self, lr=1e-3):
-        optimizer = optim.SGD(self.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+        if self.optimizer_name == 'SGD':
+            optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0005)
+        if self.optimizer_name == 'Adam':
+            optimizer = optim.Adam(self.parameters(), lr=self.lr, weight_decay=0.0005)
+        if self.optimizer_name == 'RMSprop':
+            optimizer = optim.RMSprop(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0005)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=int(0.3 * 100), gamma=0.1)
         return {
             "optimizer": optimizer,
@@ -102,6 +113,6 @@ class LitUnet(pl.LightningModule):
         x, y = batch
         x = x.view(x.size(0), -1)
         z = self.encoder(x)
-        x_hat = self.decoder(z)
+        self.decoder(z)
         test_loss = nn.CrossEntropyLoss()
         self.log("test_loss", test_loss)

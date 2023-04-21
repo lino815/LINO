@@ -8,7 +8,7 @@ import glob
 from moonrise_fm.dataloader import *
 from moonrise_fm.lib import *
 from moonrise_fm.model import *
-PATH_PARAMETERS = r'C:\Users\p.dyroey\Documents\GitHub\moonrise-fm\moonrise_fm\data\moonrise2'
+PATH_PARAMETERS = r'C:\Users\Y.li\Desktop\Moonrise_crater'
 # load image names
 file_names = []
 for filename in natsort.natsorted(glob(os.path.join(PATH_PARAMETERS, 'images', '*'))):
@@ -109,5 +109,5 @@ random.shuffle(data_aug)
 # w = np.median(F) / F
 # print('cross entropy loss class weights = ', w)
 
-export_dir = r'C:\Users\p.dyroey\Documents\GitHub\moonrise-fm\moonrise_fm\data\moonrise2_patches_1024'
+export_dir = r'C:\Users\Y.li\Desktop\moonrise2_patches_crater'
 save_patches(export_dir, data_aug)

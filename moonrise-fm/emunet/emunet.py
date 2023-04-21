@@ -1,44 +1,54 @@
 import pytorch_lightning as pl
-from .unet_parts import *
+from .emunet_parts import *
 import torch
 from torch import optim
 from lib import plot_net_predictions
-from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision
+from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision,Dice
 
 
-class LitUnet(pl.LightningModule):
-    def __init__(self, n_channels, n_classes):
-        super(LitUnet, self).__init__()
+class EMUnet(pl.LightningModule):
+    def __init__(self, n_channels, n_classes,lr=1e-3):
+        super(EMUnet, self).__init__()
         self.n_classes = n_classes
         self.val_jaccard = MulticlassJaccardIndex(num_classes=n_classes)
         self.val_accuracy = MulticlassAccuracy(num_classes=n_classes)
         self.val_recall = MulticlassRecall(num_classes=n_classes)
         self.val_precision = MulticlassPrecision(num_classes=n_classes)
         self.val_F1 = MulticlassF1Score(num_classes=n_classes)
-
-
+        self.val_dice = Dice(num_classes=n_classes)
+        self.upsample2 = torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.upsample4 = torch.nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
         self.inc = InConv(n_channels, 64)
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.down3 = Down(256, 512)
         self.down4 = Down(512, 1024)
         bilinear = False
-        self.up1 = Up(1024, 512, bilinear=bilinear)
-        self.up2 = Up(512, 256, bilinear=bilinear)
-        self.up3 = Up(256, 128, bilinear=bilinear)
-        self.up4 = Up(128, 64, bilinear=bilinear)
-        self.outc = OutConv(64, n_classes)
+        self.up1 = Up_EM(1024, 512, bilinear=bilinear)
+        self.up2 = Up_EM(512, 256, bilinear=bilinear)
+        self.up3 = Up_EM(256, 128, bilinear=bilinear)
+        self.up4 = Up_EM(128, 64, bilinear=bilinear)
+        self.outc = OutConv(64+128+256, n_classes)
 
     def forward(self, x):
         input = self.inc(x) # x1
+        input_half1, input_half2 = torch.chunk(input, 2, dim=1)
         d1 = self.down1(input)# x2
+        d1_half1, d1_half2 = torch.chunk(d1, 2, dim=1)
+        # print(d1.size(), d1_half1.size(), d1_half2.size())
         d2 = self.down2(d1)# x3
+        d2_half1, d2_half2 = torch.chunk(d2, 2, dim=1)
         d3 = self.down3(d2)# x4
+        d3_half1, d3_half2 = torch.chunk(d3, 2, dim=1)
         d4 = self.down4(d3)# x5
-        u1 = self.up1(d4, d3)
-        u2 = self.up2(u1, d2)
-        u3 = self.up3(u2, d1)
-        u4 = self.up4(u3, input)
+        u1 = self.up1(d4, d3_half1)
+        u2 = self.up2(u1, d2_half1)
+        u2up = self.upsample4(u2)
+        u3 = self.up3(u2, d1_half1)
+        u3up = self.upsample2(u3)
+        # print("u2up, u2up",u2up.size(), u3up.size())
+        u4 = self.up4(u3, input_half1)
+        u4 = torch.cat((u2up, u3up, u4),dim=1)
         output = self.outc(u4)
         return torch.sigmoid(output)
 
@@ -80,12 +90,14 @@ class LitUnet(pl.LightningModule):
         precision = self.val_recall(preds, true_masks)
         recall = self.val_recall(preds, true_masks)
         f1 = self.val_F1(preds, true_masks)
+        dice = self.val_dice(preds, true_masks)
 
         self.log('val_jaccard', jaccard, on_step=False, on_epoch=True) # why prog_bar=True?
         self.log('val_accuracy', accuracy, on_step=False, on_epoch=True)
         self.log('val_precision', precision, on_step=False, on_epoch=True)
         self.log('val_recall', recall, on_step=False, on_epoch=True)
         self.log('val_f1', f1, on_step=False, on_epoch=True)
+        self.log('val_dice', dice, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
         optimizer = optim.SGD(self.parameters(), lr=1e-2, momentum=0.9, weight_decay=0.0005)
