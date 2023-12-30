@@ -2,12 +2,8 @@ import os
 from glob import glob
 import natsort
 import json
-import matplotlib.pyplot as plt
 import numpy as np
-import cv2
-from collections import Counter
 from PIL import Image
-import re
 import json
 
 from moonrise_fm.dataloader.utils import *
@@ -57,9 +53,9 @@ def get_sizes(image_names, mode='train'):
     params = params['models_settings']
 
     if mode=='train':
-        data_dir = params['train_dir']
+        params['train_dir']
     if mode=='test':
-        data_dir = params['test_dir']
+        params['test_dir']
 
     h = []
     w = []
@@ -85,12 +81,12 @@ def load_images(image_names, mode='train'):
     params = params['models_settings']
 
     if mode=='train':
-        data_dir = params['train_dir']
+        params['train_dir']
     if mode=='test':
-        data_dir = params['test_dir']
+        params['test_dir']
 
     resize_w = params['resize_width']
-    equalize = bool(params['equalize'])
+    bool(params['equalize'])
       
     images = []
     for image_name in image_names:

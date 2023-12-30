@@ -1,3 +1,0 @@
-conda activate labelme
-
-python export_labelimg.py INPUT OUTPUT --label labels.txt

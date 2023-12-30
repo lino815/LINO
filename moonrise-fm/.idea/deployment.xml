@@ -2,7 +2,14 @@
 <project version="4">
   <component name="PublishConfigData">
     <serverData>
-      <paths name="ustc@117.71.111.18:21212">
+      <paths name="star@10.115.10.128:8765">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="star@10.115.10.128:8765 password">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />

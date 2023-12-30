@@ -4,20 +4,21 @@ import natsort
 import numpy as np
 import pytorch_lightning
 from PIL import Image
+from skimage import io
 from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision import transforms
 import torch
-from pathlib import Path
-from lib.utils import rgb2mask
+from img_lib.utils import rgb2mask
 
 class CoreDataset(Dataset):
     
     def __init__(self, path, transform=None):
         print(os.getcwd())
         print(path)
-        glob_path = glob(os.path.join(path, 'images', '*.png'))
-        self.path_images = natsort.natsorted(glob_path)
-        self.path_masks = natsort.natsorted(glob(os.path.join(path, 'masks', '*.png')))
+        path_image = path / 'images'
+        path_mask = path / 'masks'
+        self.path_images = natsort.natsorted(path_image.glob('**/*'))
+        self.path_masks = natsort.natsorted(path_mask.glob('**/*'))
         self.transform = transform
         print(f" {len(self.path_images)} images, {len(self.path_masks)} masks")
         
@@ -25,15 +26,27 @@ class CoreDataset(Dataset):
         return len(self.path_images)
     
     def __getitem__(self, idx):
-        
-        image = Image.open(self.path_images[idx])
-        mask = Image.open(self.path_masks[idx])
-        
+        # allowed_formats = ('png', 'jpeg', 'tiff')
+        # image = Image.open(self.path_images[idx], formats=allowed_formats)
+        # mask = Image.open(self.path_masks[idx], formats=allowed_formats)
+        extension = (self.path_images[idx].suffix)
+        if extension == ".tif":
+            image = io.imread(self.path_images[idx], plugin="tifffile")
+            mask = io.imread(self.path_masks[idx], plugin="tifffile")
+            image = image.transpose(1,2,0)
+        elif extension in [".png", ".jpg", ".jpeg", ".gif", ".bmp"]:
+            image = io.imread(self.path_images[idx])
+            mask = io.imread(self.path_masks[idx])
+        else:
+            raise Exception(
+                "Not supported image type: " + extension + ". Supported types are: .png, .jpg, .jpeg, .gif, .bmp and .tif.")
+
+        # print(image.shape, mask.shape)
         sample = {'image':image, 'mask':mask}
         
         if self.transform:
             sample = self.transform(sample)
-        
+
         return sample
     
 # add image normalization transform at some point

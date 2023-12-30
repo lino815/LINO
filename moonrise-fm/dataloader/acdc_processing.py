@@ -16,7 +16,6 @@ from collections import OrderedDict
 from batchgenerators.utilities.file_and_folder_operations import *
 import shutil
 import numpy as np
-from sklearn.model_selection import KFold
 
 
 def convert_to_submission(source_dir, target_dir):

@@ -5,31 +5,39 @@ import pytorch_lightning as pl
 from .unet3plus_parts import unetConv2
 from .init_weights import init_weights
 from torch import optim
-from lib import plot_net_predictions
-from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision,Dice
-
+from img_lib import plot_net_predictions
+from torchmetrics.classification import MulticlassJaccardIndex, MulticlassAccuracy, MulticlassRecall, MulticlassF1Score, MulticlassPrecision
+from torchmetrics import Dice
+from loss.loss import *
 '''
     UNet 3+
 '''
 
 class UNet_3Plus(pl.LightningModule):
 
-    def __init__(self, in_channels=3, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True, lr=1e-2, optimizer='SGD'):
+    # def __init__(self, n_channels=3, n_classes=6, feature_scale=4, is_deconv=True, is_batchnorm=True, lr=1e-3, optimizer='SGD'):
+    def __init__(self, n_channels=3, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True, lr=1e-2,
+                 optimizer='SGD', scheduler_name='StepLR', loss_name='CELoss', weight_decay=0.0005):
         super(UNet_3Plus, self).__init__()
         self.is_deconv = is_deconv
-        self.in_channels = in_channels
+        self.in_channels = n_channels
         self.is_batchnorm = is_batchnorm
         self.feature_scale = feature_scale
 
         self.lr = lr
+        self.scheduler_name = scheduler_name
         self.optimizer_name = optimizer
-
-        self.val_jaccard = MulticlassJaccardIndex(num_classes=n_classes)
-        self.val_accuracy = MulticlassAccuracy(num_classes=n_classes)
+        self.loss_name = loss_name
+        self.weight_decay = weight_decay
+        if self.loss_name == 'CELoss':
+            self.criterion = nn.CrossEntropyLoss()
+        elif self.loss_name == "FocalLoss":
+            self.criterion = FocalLoss()
+        elif self.loss_name == "DiceLoss":
+            self.criterion = DiceLoss(num_classes=n_classes)
         self.val_recall = MulticlassRecall(num_classes=n_classes)
         self.val_precision = MulticlassPrecision(num_classes=n_classes)
-        self.val_F1 = MulticlassF1Score(num_classes=n_classes)
-        self.val_dice = Dice(num_classes=n_classes)
+        self.dice = Dice()
 
 
         filters = [64, 128, 256, 512, 1024]
@@ -269,7 +277,7 @@ class UNet_3Plus(pl.LightningModule):
         return torch.sigmoid(d1)
 
     def training_step(self, batch, batch_idx):
-        criterion = nn.CrossEntropyLoss()
+        # criterion = nn.CrossEntropyLoss()
         imgs = batch['image']
         # remove for 4 dim images
         if imgs.shape[2] == 4:
@@ -282,10 +290,8 @@ class UNet_3Plus(pl.LightningModule):
         outputs = self(imgs)
         probs = torch.softmax(outputs, dim=1)
         masks_pred = torch.argmax(probs, dim=1)
-        loss = criterion(outputs, true_masks)
-        jaccard = self.val_jaccard(masks_pred, true_masks)
+        loss = self.criterion(outputs, true_masks)
         self.log("train_loss", loss, on_step=False, on_epoch=True)
-        self.log('train_jaccard', jaccard, on_step=False, on_epoch=True)
         if batch_idx % 100 == 0:
             # TODO change here to normal log?
             self.logger.experiment.add_figure('predictions vs. actuals',
@@ -300,7 +306,15 @@ class UNet_3Plus(pl.LightningModule):
             optimizer = optim.Adam(self.parameters(), lr=self.lr, weight_decay=0.0005)
         if self.optimizer_name == 'RMSprop':
             optimizer = optim.RMSprop(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0005)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=int(0.3 * 100), gamma=0.1)
+        # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=int(0.3 * 100), gamma=0.1)
+        if self.scheduler_name == 'StepLR':
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=int(0.3 * 100), gamma=0.1)
+        elif self.scheduler_name == 'CosineAnnealingLR':
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+        elif self.scheduler_name == 'ExponentialLR':
+            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+        else:
+            raise ValueError("Invalid scheduler name")
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
@@ -309,27 +323,27 @@ class UNet_3Plus(pl.LightningModule):
         }
 
     def validation_step(self, batch, batch_idx):
-        criterion = nn.CrossEntropyLoss()
+        # criterion = nn.CrossEntropyLoss()
         data = batch['image']
         true_masks = batch['mask']
         preds = self(data)
 
-        loss = criterion(preds, true_masks)
+        loss = self.criterion(preds, true_masks)
         self.log("val_loss", loss, on_step=False, on_epoch=True)
 
-        jaccard = self.val_jaccard(preds, true_masks)
-        accuracy = self.val_accuracy(preds, true_masks)
+        probs = torch.softmax(preds, dim=1)
+        masks_pred = torch.argmax(probs, dim=1)
+        self.logger.experiment.add_figure('val_tested',
+                                          plot_net_predictions(data, true_masks, masks_pred, data.shape[0]),
+                                          global_step=self.global_step)
+
         precision = self.val_recall(preds, true_masks)
         recall = self.val_recall(preds, true_masks)
-        f1 = self.val_F1(preds, true_masks)
-        dice = self.val_dice(preds, true_masks)
+        dice = self.dice(preds, true_masks)
 
-        self.log('val_jaccard', jaccard, on_step=False, on_epoch=True) # why prog_bar=True?
-        self.log('val_accuracy', accuracy, on_step=False, on_epoch=True)
         self.log('val_precision', precision, on_step=False, on_epoch=True)
         self.log('val_recall', recall, on_step=False, on_epoch=True)
-        self.log('val_f1', f1, on_step=False, on_epoch=True)
-        self.log('val_dice', dice, on_step=False, on_epoch=True)
+        self.log('val_dice', dice, on_epoch=True)
 
 '''
     UNet 3+ with deep supervision

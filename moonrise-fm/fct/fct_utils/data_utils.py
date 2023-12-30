@@ -4,7 +4,7 @@ import nibabel as nib
 import numpy as np
 from monai import data, transforms
 from monai.data import load_decathlon_datalist
-
+import pathlib
 def get_loader(args):
     data_dir = args.data_dir
     datalist_json = os.path.join(data_dir, 'dataset.json')
@@ -58,7 +58,11 @@ def get_acdc(path,input_size=(224,224,1)):
     all_header = []
     all_affine = []
     info = []
-    for root, directories, files in os.walk(path):
+    print(f"{os.getcwd()} such path {path}")
+    path = pathlib.Path(path)
+    for root, directories, files in pathlib.Path.iterdir(path):
+        print(f"so many drs {len(directories)}")
+        print(f"so many files {len(files)}")
         for file in files:
             if ".gz" and "frame" in file:
                 if "_gt" not in file:
@@ -79,8 +83,7 @@ def get_acdc(path,input_size=(224,224,1)):
             
 
     data = [all_imgs, all_gt, info]                  
- 
-      
+    print(data)
     data[0] = np.expand_dims(data[0], axis=3)
     if path[-9:] != "true_test":
         data[1] = np.expand_dims(data[1], axis=3)

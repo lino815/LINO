@@ -15,15 +15,15 @@ from fct_utils.args_utils import parse_args
 from fct_utils.data_utils import get_acdc, convert_masks
 from fct_utils.model import FCT
 
-import icecream as ic
 
 
 logging.config.fileConfig('moonrise-fm/fct/config/log_config.conf')
 logger = logging.getLogger('mylog')
 
 args = parse_args()
+args = parse_args()
 begin_time = datetime.now().strftime('%Y-%m-%d-%H%M%S')
-assert torch.cuda.is_available() == True
+assert torch.cuda.is_available() is True
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def setup_seed(seed):
@@ -284,7 +284,7 @@ def main():
             torch.save(model.state_dict(), f'{args.checkpoint}/model/fct.pt')
             # torch.jit.script(model).save(f'{args.checkpoint}/model/model_jit.pt')
             if args.colab:
-                torch.save(model.state_dict(), f'/content/drive/MyDrive/fct.pt')
+                torch.save(model.state_dict(), '/content/drive/MyDrive/fct.pt')
                 # torch.jit.script(model).save(f'/content/drive/MyDrive/model_jit.pt')
         
         # checkpoint 
